@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Platforms collection - public read & write for GB STUDY platform app
+    match /platforms/{platformId} {
+      allow read, write: if true;
+    }
+
+    // Settings collection
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Banners collection
+    match /banners/{bannerId} {
+      allow read, write: if true;
+    }
+
+    // Upcoming collection
+    match /upcoming/{upcomingId} {
+      allow read, write: if true;
+    }
+
+    // Test connection doc
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "entities": {
+    "Platform": {
+      "title": "Platform",
+      "description": "Educational platform entry in the GB STUDY directory",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the platform",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the study platform",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "url": {
+          "type": "string",
+          "description": "Target website URL of the platform",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of offerings, courses, or features",
+          "maxLength": 1000
+        },
+        "category": {
+          "type": "string",
+          "description": "Primary category (e.g., Engineering, Medical, UPSC, SSC, Coding)",
+          "maxLength": 64
+        },
+        "tags": {
+          "type": "array",
+          "description": "Searchable tags like free, notes, test-series, live-classes"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon URL or icon identifier",
+          "maxLength": 500
+        },
+        "status": {
+          "type": "string",
+          "description": "Platform status: active or upcoming",
+          "enum": ["active", "upcoming"]
+        },
+        "order": {
+          "type": "number",
+          "description": "Numerical display order for sorting"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether highlighted in the featured section"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["name", "url", "category", "status", "order"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Promotional banner displayed on the home carousel",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for banner",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Banner headline",
+          "maxLength": 120
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Secondary subtext or highlight",
+          "maxLength": 240
+        },
+        "badge": {
+          "type": "string",
+          "description": "Small badge text e.g. NEW, FREE, SPECIAL",
+          "maxLength": 40
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Image background URL",
+          "maxLength": 500
+        },
+        "actionUrl": {
+          "type": "string",
+          "description": "Destination link when banner is clicked",
+          "maxLength": 500
+        },
+        "actionLabel": {
+          "type": "string",
+          "description": "Call-to-action button text",
+          "maxLength": 60
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether active"
+        }
+      },
+      "required": ["title", "actionUrl", "order", "active"]
+    },
+    "UpcomingPlatform": {
+      "title": "UpcomingPlatform",
+      "description": "Upcoming educational platforms and study portals scheduled for release",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of upcoming portal",
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what is coming",
+          "maxLength": 600
+        },
+        "targetDate": {
+          "type": "string",
+          "description": "Expected release timeline or date",
+          "maxLength": 60
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of study",
+          "maxLength": 64
+        },
+        "interestedCount": {
+          "type": "number",
+          "description": "Number of interested users"
+        },
+        "previewUrl": {
+          "type": "string",
+          "description": "Optional preview or official teaser URL",
+          "maxLength": 500
+        },
+        "order": {
+          "type": "number",
+          "description": "Display sequence"
+        }
+      },
+      "required": ["name", "category", "targetDate"]
+    },
+    "AppSetting": {
+      "title": "AppSetting",
+      "description": "System-wide application configuration and controls",
+      "type": "object",
+      "properties": {
+        "telegramUrl": {
+          "type": "string",
+          "description": "Telegram community URL",
+          "maxLength": 300
+        },
+        "announcement": {
+          "type": "string",
+          "description": "Global announcement marquee or banner text",
+          "maxLength": 500
+        },
+        "announcementActive": {
+          "type": "boolean",
+          "description": "Whether announcement banner is active"
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "Support or contact email",
+          "maxLength": 120
+        },
+        "appName": {
+          "type": "string",
+          "description": "Application title",
+          "maxLength": 80
+        }
+      },
+      "required": ["telegramUrl"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator record",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Admin email",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "Role",
+          "enum": ["superadmin", "editor"]
+        },
+        "addedAt": {
+          "type": "string",
+          "description": "ISO timestamp added"
+        }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/platforms/{platformId}": {
+      "schema": "Platform",
+      "description": "Collection of all study platforms"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Promotional carousel banners"
+    },
+    "/upcoming/{upcomingId}": {
+      "schema": "UpcomingPlatform",
+      "description": "Upcoming platforms and portals"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSetting",
+      "description": "Application settings and flags"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Authorized administrators"
+    }
+  }
+}
