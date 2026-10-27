@@ -11,7 +11,7 @@ import {
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Platform, AppConfig, ImportSummary, Banner, OpenMode } from '../types';
 import { VIDEO_PLATFORMS, DEFAULT_BANNER_IMAGE, DEFAULT_TELEGRAM_URL } from '../data/videoPlatforms';
-import { compressImage, isSafeFirestorePayload } from '../lib/imageCompressor';
+import { compressImage, compressBannerImage, isSafeFirestorePayload } from '../lib/imageCompressor';
 
 export const DEFAULT_CONFIG: AppConfig = {
   bannerImageUrl: DEFAULT_BANNER_IMAGE,
@@ -103,7 +103,8 @@ async function sanitizeIcon(rawIcon?: string): Promise<string> {
   return trimmed;
 }
 
-// Helper to sanitize banner image
+// Helper to sanitize banner image - preserves full 8K / 4K fidelity for URLs,
+// and high-res 1920x1080 WebP for data images without muddy downscaling
 async function sanitizeBannerImage(rawImg?: string): Promise<string> {
   if (!rawImg) return DEFAULT_BANNER_IMAGE;
   const trimmed = rawImg.trim();
@@ -114,11 +115,7 @@ async function sanitizeBannerImage(rawImg?: string): Promise<string> {
 
   if (trimmed.startsWith('data:image/')) {
     try {
-      const compressed = await compressImage(trimmed, 800, 360, 0.7);
-      if (compressed.length > 90000) {
-        return await compressImage(compressed, 640, 280, 0.55);
-      }
-      return compressed;
+      return await compressBannerImage(trimmed, 1920, 1080, 0.88);
     } catch {
       return DEFAULT_BANNER_IMAGE;
     }
@@ -364,7 +361,7 @@ export async function addBanner(banner: Omit<Banner, 'id'>): Promise<string> {
       createdAt: new Date().toISOString(),
     };
 
-    if (!isSafeFirestorePayload(payload, 250000)) {
+    if (!isSafeFirestorePayload(payload, 850000)) {
       throw new Error('Banner image too large. Please choose a smaller image file or URL.');
     }
 
@@ -389,7 +386,7 @@ export async function updateBanner(id: string, banner: Partial<Banner>): Promise
       payload.imageUrl = imageUrl;
     }
 
-    if (!isSafeFirestorePayload(payload, 250000)) {
+    if (!isSafeFirestorePayload(payload, 850000)) {
       throw new Error('Banner image too large. Please choose a smaller image file or URL.');
     }
 

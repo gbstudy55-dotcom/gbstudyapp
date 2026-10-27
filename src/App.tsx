@@ -178,7 +178,7 @@ export default function App() {
     }
   };
 
-  // When PIN (GBADMIN2026) is successfully entered
+  // When PIN (@GBADMIN2026) is successfully entered
   const handlePinSuccess = () => {
     try {
       sessionStorage.setItem('gb_admin_unlocked', 'true');
@@ -407,7 +407,7 @@ export default function App() {
         telegramUrl={config.telegramUrl}
       />
 
-      {/* Admin PIN Verification Modal (Requires GBADMIN2026) */}
+      {/* Admin PIN Verification Modal (Requires @GBADMIN2026) */}
       <AdminPinModal
         isOpen={adminPinModalOpen}
         onClose={() => setAdminPinModalOpen(false)}

@@ -99,10 +99,10 @@ export const ChatView: React.FC = () => {
     }
   };
 
-  // Handle Quick Admin Fill (Convenience button for Sarvottam)
+  // Handle Quick Admin Fill
   const handleQuickAdminLogin = () => {
     setLoginUsername('SARVOTTAM');
-    setLoginPassword('GBADMIN2026');
+    setLoginPassword('@GBADMIN2026');
     setAuthMode('login');
     setLoginError('');
   };
@@ -316,7 +316,7 @@ export const ChatView: React.FC = () => {
                     required
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
-                    placeholder="Apna username dalein (e.g. SARVOTTAM)"
+                    placeholder="Apna username dalein"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[#070e17] border border-[#162536] text-white placeholder:text-slate-500 outline-none focus:border-[#38bdf8] transition"
                   />
                 </div>
@@ -354,18 +354,6 @@ export const ChatView: React.FC = () => {
                 {loginLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4 stroke-[2.5]" />}
                 <span>{loginLoading ? 'Logging in...' : 'Login & Open Chat'}</span>
               </button>
-
-              {/* Admin quick login helper */}
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  onClick={handleQuickAdminLogin}
-                  className="text-[11px] text-[#38bdf8] hover:underline cursor-pointer inline-flex items-center gap-1 font-bold"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Admin Login (SARVOTTAM)</span>
-                </button>
-              </div>
             </form>
           )}
 

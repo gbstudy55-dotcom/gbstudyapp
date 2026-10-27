@@ -7,7 +7,7 @@ interface AdminPinModalProps {
   onSuccess: () => void;
 }
 
-export const ADMIN_SECRET_PIN = 'GBADMIN2026';
+export const ADMIN_SECRET_PIN = '@GBADMIN2026';
 
 export const AdminPinModal: React.FC<AdminPinModalProps> = ({
   isOpen,

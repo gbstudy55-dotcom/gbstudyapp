@@ -10,7 +10,7 @@ import {
   bulkImportPlatforms, parseCSVPlatforms,
   addBanner, updateBanner, deleteBanner 
 } from '../services/dbService';
-import { compressImage } from '../lib/imageCompressor';
+import { compressImage, compressBannerImage } from '../lib/imageCompressor';
 import { PlatformIcon } from './PlatformIcon';
 
 // Popular icon presets for 1-click selection
@@ -245,13 +245,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     if (!file) return;
 
     setBannerCompressing(true);
-    setBannerInfo('Optimizing banner for cloud...');
-
     try {
-      const compressed = await compressImage(file, 800, 450, 0.7);
+      const compressed = await compressBannerImage(file, 1920, 1080, 0.88);
       setBannerForm((prev) => ({ ...prev, imageUrl: compressed }));
       const kb = Math.round(compressed.length / 1024);
-      setBannerInfo(`✓ Optimized (16:9): ${kb} KB (Cloud Safe)`);
+      setBannerInfo(`✓ Ultra-HD 16:9 Banner Ready: ${kb} KB (High Clarity)`);
     } catch (err) {
       console.error('Error compressing banner:', err);
       setBannerInfo('Could not optimize banner image');
@@ -271,8 +269,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setBannerSaving(true);
     try {
       let imageUrl = bannerForm.imageUrl.trim();
-      if (imageUrl.startsWith('data:image/') && imageUrl.length > 80000) {
-        imageUrl = await compressImage(imageUrl, 800, 360, 0.7);
+      if (imageUrl.startsWith('data:image/') && imageUrl.length > 500000) {
+        imageUrl = await compressBannerImage(imageUrl, 1920, 1080, 0.85);
       }
 
       if (bannerForm.id) {
@@ -920,7 +918,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   )}
 
                   <div>
-                    <span className="block text-[11px] text-slate-400 mb-1">Upload from Device (Auto-compressed):</span>
+                    <span className="block text-[11px] text-slate-300 font-bold mb-1">
+                      1. Upload from Device (Ultra-HD / 2K Auto-optimized):
+                    </span>
                     <input
                       type="file"
                       accept="image/*"
@@ -931,14 +931,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </div>
 
                   <div>
-                    <span className="block text-[11px] text-slate-400 mb-1">Or Paste Image URL:</span>
+                    <span className="block text-[11px] text-slate-300 font-bold mb-1">
+                      2. Or Paste Direct Image URL (Recommended for 100% 8K Loss-Free Quality):
+                    </span>
                     <input
                       type="text"
                       value={bannerForm.imageUrl}
                       onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
-                      placeholder="https://example.com/banner.jpg"
+                      placeholder="https://example.com/banner-8k.png (Direct link from imgbb, etc.)"
                       className="w-full px-3 py-2 rounded-xl bg-[#09111a] border border-[#142333] text-white outline-none focus:border-[#38bdf8]"
                     />
+                    <span className="block text-[10px] text-sky-400 mt-1">
+                      💡 <strong>8K Quality Tip:</strong> Agar aapke paas 4K/8K banner hai to use <strong className="underline">imgbb.com</strong> ya <strong className="underline">postimages.org</strong> par upload karke direct link yahan paste karein, photo bilkul bhi nahi fategi!
+                    </span>
                   </div>
                 </div>
 

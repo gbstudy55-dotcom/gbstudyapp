@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden xs:inline">Telegram</span>
         </button>
 
-        {/* Admin Panel button - ONLY visible after entering password (GBADMIN2026) */}
+        {/* Admin Panel button - ONLY visible after entering password (@GBADMIN2026) */}
         {adminUnlocked && (
           <button
             onClick={onOpenAdmin}

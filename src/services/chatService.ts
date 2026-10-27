@@ -11,7 +11,7 @@ import { compressImage } from '../lib/imageCompressor';
 
 // Secret Admin Credentials defined by user
 export const ADMIN_USERNAME = 'SARVOTTAM';
-export const ADMIN_PASSWORD = 'GBADMIN2026';
+export const ADMIN_PASSWORD = '@GBADMIN2026';
 
 export const ADMIN_USER: ChatUser = {
   id: 'admin_sarvottam',

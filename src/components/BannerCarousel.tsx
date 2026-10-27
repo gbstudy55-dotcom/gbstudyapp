@@ -55,6 +55,7 @@ export const BannerCarousel: React.FC<BannerCarouselProps> = ({ banners, onOpenB
           src={current.imageUrl || '/banner-navratri.svg'}
           alt={current.title || 'GB STUDY Banner'}
           className="w-full h-full object-cover transition-all duration-300"
+          style={{ imageRendering: '-webkit-optimize-contrast' }}
           loading="eager"
           decoding="async"
           fetchPriority="high"
