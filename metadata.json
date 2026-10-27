@@ -1,6 +1,0 @@
-{
-  "name": "GB STUDY",
-  "description": "GB STUDY - Premium educational directory and platform aggregator for competitive exams, test series, and free study resources.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
