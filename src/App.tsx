@@ -72,7 +72,7 @@ export default function App() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [activeScreen, setActiveScreen] = useState<'main' | 'batches'>('main');
 
-  // Fetch live platforms & banners from backend database (and sync to localStorage)
+  // Fetch live platforms & banners from backend database (and merge safely with localStorage)
   const refreshBackendData = async () => {
     try {
       const [platRes, banRes] = await Promise.all([
@@ -81,18 +81,112 @@ export default function App() {
       ]);
 
       if (platRes && platRes.ok) {
-        const platData = await platRes.json();
-        if (Array.isArray(platData)) {
-          setPlatforms(platData);
-          localStorage.setItem('gb_study_platforms', JSON.stringify(platData));
+        const contentType = platRes.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const platData = await platRes.json();
+          if (Array.isArray(platData)) {
+            // Get local platforms and deleted IDs
+            const localRaw = localStorage.getItem('gb_study_platforms');
+            let localPlatforms: Platform[] = [];
+            try {
+              if (localRaw) localPlatforms = JSON.parse(localRaw);
+            } catch (e) {}
+
+            let deletedIds: string[] = [];
+            try {
+              const dRaw = localStorage.getItem('gb_study_deleted_platforms');
+              if (dRaw) deletedIds = JSON.parse(dRaw);
+            } catch (e) {}
+
+            // Combine local and backend platforms, preserving user added platforms
+            const platformMap = new Map<string, Platform>();
+
+            // Add local platforms first (unless user explicitly deleted them)
+            localPlatforms.forEach((p) => {
+              if (p && p.id && !deletedIds.includes(p.id)) {
+                platformMap.set(p.id, p);
+              }
+            });
+
+            // Merge with backend platforms (unless deleted)
+            platData.forEach((p: Platform) => {
+              if (p && p.id && !deletedIds.includes(p.id)) {
+                platformMap.set(p.id, { ...(platformMap.get(p.id) || {}), ...p });
+              }
+            });
+
+            const merged = Array.from(platformMap.values());
+            // Only update if we have items or if both were empty
+            if (merged.length > 0 || (localPlatforms.length === 0 && platData.length === 0)) {
+              setPlatforms(merged);
+              localStorage.setItem('gb_study_platforms', JSON.stringify(merged));
+            }
+
+            // If local has platforms that the backend does not have yet, push them to backend
+            if (platData.length < merged.length) {
+              const missingOnBackend = merged.filter(
+                (lp) => !platData.some((bp: Platform) => bp.id === lp.id)
+              );
+              for (const missing of missingOnBackend) {
+                fetch('/api/platforms', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(missing),
+                }).catch(() => {});
+              }
+            }
+          }
         }
       }
 
       if (banRes && banRes.ok) {
-        const banData = await banRes.json();
-        if (Array.isArray(banData)) {
-          setBanners(banData);
-          localStorage.setItem('gb_study_banners', JSON.stringify(banData));
+        const contentType = banRes.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const banData = await banRes.json();
+          if (Array.isArray(banData)) {
+            const localRaw = localStorage.getItem('gb_study_banners');
+            let localBanners: BannerSlide[] = [];
+            try {
+              if (localRaw) localBanners = JSON.parse(localRaw);
+            } catch (e) {}
+
+            let deletedBannerIds: string[] = [];
+            try {
+              const dRaw = localStorage.getItem('gb_study_deleted_banners');
+              if (dRaw) deletedBannerIds = JSON.parse(dRaw);
+            } catch (e) {}
+
+            const bannerMap = new Map<string, BannerSlide>();
+            localBanners.forEach((b) => {
+              if (b && b.id && !deletedBannerIds.includes(b.id)) {
+                bannerMap.set(b.id, b);
+              }
+            });
+            banData.forEach((b: BannerSlide) => {
+              if (b && b.id && !deletedBannerIds.includes(b.id)) {
+                bannerMap.set(b.id, { ...(bannerMap.get(b.id) || {}), ...b });
+              }
+            });
+
+            const mergedBanners = Array.from(bannerMap.values());
+            if (mergedBanners.length > 0 || (localBanners.length === 0 && banData.length === 0)) {
+              setBanners(mergedBanners);
+              localStorage.setItem('gb_study_banners', JSON.stringify(mergedBanners));
+            }
+
+            if (banData.length < mergedBanners.length) {
+              const missingOnBackend = mergedBanners.filter(
+                (lb) => !banData.some((bb: BannerSlide) => bb.id === lb.id)
+              );
+              for (const missing of missingOnBackend) {
+                fetch('/api/banners', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(missing),
+                }).catch(() => {});
+              }
+            }
+          }
         }
       }
     } catch (err) {
@@ -143,6 +237,32 @@ export default function App() {
     }
   };
 
+  // Direct instant save/update platform to local state & cache (GUARANTEED PERSISTENCE!)
+  const handleSavePlatformDirect = (platformData: Platform) => {
+    setPlatforms((prev) => {
+      const index = prev.findIndex((p) => p.id === platformData.id);
+      let updated: Platform[];
+      if (index >= 0) {
+        updated = [...prev];
+        updated[index] = { ...updated[index], ...platformData };
+      } else {
+        updated = [platformData, ...prev];
+      }
+      localStorage.setItem('gb_study_platforms', JSON.stringify(updated));
+      return updated;
+    });
+
+    // Remove from deleted list if re-added or edited
+    try {
+      const deletedRaw = localStorage.getItem('gb_study_deleted_platforms');
+      if (deletedRaw) {
+        const deletedIds: string[] = JSON.parse(deletedRaw);
+        const filtered = deletedIds.filter((id) => id !== platformData.id);
+        localStorage.setItem('gb_study_deleted_platforms', JSON.stringify(filtered));
+      }
+    } catch (e) {}
+  };
+
   // Direct instant delete platform from local state & cache (0ms delay!)
   const handleDeletePlatformDirect = (id: string) => {
     setPlatforms((prev) => {
@@ -150,6 +270,41 @@ export default function App() {
       localStorage.setItem('gb_study_platforms', JSON.stringify(updated));
       return updated;
     });
+
+    // Mark as deleted so auto-sync never brings it back
+    try {
+      const deletedRaw = localStorage.getItem('gb_study_deleted_platforms');
+      const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem('gb_study_deleted_platforms', JSON.stringify(deletedIds));
+      }
+    } catch (e) {}
+  };
+
+  // Direct instant save/update banner to local state & cache
+  const handleSaveBannerDirect = (bannerData: BannerSlide) => {
+    setBanners((prev) => {
+      const index = prev.findIndex((b) => b.id === bannerData.id);
+      let updated: BannerSlide[];
+      if (index >= 0) {
+        updated = [...prev];
+        updated[index] = { ...updated[index], ...bannerData };
+      } else {
+        updated = [...prev, bannerData];
+      }
+      localStorage.setItem('gb_study_banners', JSON.stringify(updated));
+      return updated;
+    });
+
+    try {
+      const deletedRaw = localStorage.getItem('gb_study_deleted_banners');
+      if (deletedRaw) {
+        const deletedIds: string[] = JSON.parse(deletedRaw);
+        const filtered = deletedIds.filter((id) => id !== bannerData.id);
+        localStorage.setItem('gb_study_deleted_banners', JSON.stringify(filtered));
+      }
+    } catch (e) {}
   };
 
   // Direct instant delete banner from local state & cache (0ms delay!)
@@ -159,6 +314,15 @@ export default function App() {
       localStorage.setItem('gb_study_banners', JSON.stringify(updated));
       return updated;
     });
+
+    try {
+      const deletedRaw = localStorage.getItem('gb_study_deleted_banners');
+      const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem('gb_study_deleted_banners', JSON.stringify(deletedIds));
+      }
+    } catch (e) {}
   };
 
   // When initial splash completes
@@ -294,6 +458,8 @@ export default function App() {
         platforms={platforms}
         banners={banners}
         onRefreshData={refreshBackendData}
+        onSavePlatformDirect={handleSavePlatformDirect}
+        onSaveBannerDirect={handleSaveBannerDirect}
         onDeletePlatformDirect={handleDeletePlatformDirect}
         onDeleteBannerDirect={handleDeleteBannerDirect}
       />

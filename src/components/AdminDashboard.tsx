@@ -25,6 +25,8 @@ interface AdminDashboardProps {
   platforms: Platform[];
   banners: BannerSlide[];
   onRefreshData: () => Promise<void>;
+  onSavePlatformDirect?: (platform: Platform) => void;
+  onSaveBannerDirect?: (banner: BannerSlide) => void;
   onDeletePlatformDirect?: (id: string) => void;
   onDeleteBannerDirect?: (id: string) => void;
 }
@@ -35,6 +37,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   platforms,
   banners,
   onRefreshData,
+  onSavePlatformDirect,
+  onSaveBannerDirect,
   onDeletePlatformDirect,
   onDeleteBannerDirect,
 }) => {
@@ -100,40 +104,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     setIsSubmitting(true);
-    try {
-      const payload: Partial<Platform> = {
-        name: platformName.trim(),
-        subtitle: platformSubtitle.trim() || 'Open platform to explore content.',
-        url: platformUrl.trim(),
-        logo: platformLogo.trim() || '/app-icon.png',
-        category: platformCategory.trim() || 'General',
-        openMode: platformOpenMode,
-        tabPlacement: platformTabPlacement,
-        batchesCount: 15,
-      };
+    const targetId = editingPlatformId || ('plat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+    const savedPlatform: Platform = {
+      id: targetId,
+      name: platformName.trim(),
+      subtitle: platformSubtitle.trim() || 'Open platform to explore content.',
+      url: platformUrl.trim(),
+      logo: platformLogo.trim() || '/app-icon.png',
+      category: platformCategory.trim() || 'General',
+      openMode: platformOpenMode || 'new_tab',
+      tabPlacement: platformTabPlacement || 'live',
+      batchesCount: 15,
+      createdAt: new Date().toISOString(),
+    };
 
+    // 1. Immediately persist to local React state & localStorage
+    onSavePlatformDirect?.(savedPlatform);
+
+    // 2. Show instant feedback
+    if (editingPlatformId) {
+      showToast(`Platform "${platformName}" update ho gaya! ✓`);
+    } else {
+      showToast(`Naya platform "${platformName}" live ho gaya! ✓`);
+    }
+
+    resetPlatformForm();
+
+    // 3. Persist to server / API in background
+    try {
       if (editingPlatformId) {
         await fetch(`/api/platforms/${editingPlatformId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(savedPlatform),
         });
-        showToast(`Platform "${platformName}" update ho gaya! ✓`);
       } else {
         await fetch('/api/platforms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(savedPlatform),
         });
-        showToast(`Naya platform "${platformName}" live ho gaya! ✓`);
       }
-
-      resetPlatformForm();
-      await onRefreshData();
     } catch (err) {
-      showToast('Error saving platform');
+      console.warn('Backend save notice (local state persisted):', err);
     } finally {
       setIsSubmitting(false);
+      onRefreshData().catch(() => {});
     }
   };
 
@@ -164,16 +180,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleTogglePlacement = async (p: Platform) => {
     const nextPlacement: TabPlacement = p.tabPlacement === 'live' ? 'upcoming' : 'live';
+    const updatedPlatform: Platform = { ...p, tabPlacement: nextPlacement };
+    // Immediately persist
+    onSavePlatformDirect?.(updatedPlatform);
+    showToast(`Platform "${p.name}" ko ${nextPlacement.toUpperCase()} tab me shift kar diya!`);
+
     try {
       await fetch(`/api/platforms/${p.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tabPlacement: nextPlacement }),
       });
-      showToast(`Platform "${p.name}" ko ${nextPlacement.toUpperCase()} tab me shift kar diya!`);
       await onRefreshData();
     } catch (err) {
-      showToast('Error toggling placement');
+      console.warn('Backend toggle notice (local state persisted):', err);
     }
   };
 
@@ -197,38 +217,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     setIsSubmitting(true);
-    try {
-      const payload: Partial<BannerSlide> = {
-        title: bannerTitle.trim(),
-        subtitle: bannerSubtitle.trim(),
-        imageUrl: bannerImage.trim() || '/banners/banner_clean_1.jpg',
-        actionUrl: bannerActionUrl.trim() || 'https://t.me/GBFreestudy',
-        actionType: bannerActionType,
-        badgeText: bannerBadgeText.trim(),
-      };
+    const targetId = editingBannerId || ('banner-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+    const savedBanner: BannerSlide = {
+      id: targetId,
+      title: bannerTitle.trim(),
+      subtitle: bannerSubtitle.trim(),
+      imageUrl: bannerImage.trim() || '/banners/banner_clean_1.jpg',
+      actionUrl: bannerActionUrl.trim() || 'https://t.me/GBFreestudy',
+      actionType: bannerActionType || 'platform',
+      badgeText: bannerBadgeText.trim(),
+      authorText: 'SARVOTTAM YADAV',
+      handleText: '@GBSTUDY',
+    };
 
+    // 1. Immediately persist to local React state & localStorage
+    onSaveBannerDirect?.(savedBanner);
+
+    if (editingBannerId) {
+      showToast('Carousel slide update ho gayi! ✓');
+    } else {
+      showToast('Nayi carousel slide add ho gayi! ✓');
+    }
+
+    resetBannerForm();
+
+    // 2. Persist to server in background
+    try {
       if (editingBannerId) {
         await fetch(`/api/banners/${editingBannerId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(savedBanner),
         });
-        showToast('Carousel slide update ho gayi! ✓');
       } else {
         await fetch('/api/banners', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(savedBanner),
         });
-        showToast('Nayi carousel slide add ho gayi! ✓');
       }
-
-      resetBannerForm();
-      await onRefreshData();
     } catch (err) {
-      showToast('Error saving banner');
+      console.warn('Backend save notice (local state persisted):', err);
     } finally {
       setIsSubmitting(false);
+      onRefreshData().catch(() => {});
     }
   };
 
