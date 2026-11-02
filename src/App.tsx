@@ -13,6 +13,14 @@ import { GBAiView } from './components/GBAiView';
 import { BottomNav, NavTab } from './components/BottomNav';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import {
+  subscribeToPlatforms,
+  subscribeToBanners,
+  savePlatformToCloud,
+  deletePlatformFromCloud,
+  saveBannerToCloud,
+  deleteBannerFromCloud,
+} from './firebase';
 
 export default function App() {
   // Database / Backend State with localStorage fallback for 100% Vercel persistence
@@ -20,7 +28,8 @@ export default function App() {
     const saved = localStorage.getItem('gb_study_platforms');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
     return [];
@@ -30,7 +39,8 @@ export default function App() {
     const saved = localStorage.getItem('gb_study_banners');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
     return [];
@@ -116,7 +126,6 @@ export default function App() {
             });
 
             const merged = Array.from(platformMap.values());
-            // Only update if we have items or if both were empty
             if (merged.length > 0 || (localPlatforms.length === 0 && platData.length === 0)) {
               setPlatforms(merged);
               localStorage.setItem('gb_study_platforms', JSON.stringify(merged));
@@ -195,10 +204,29 @@ export default function App() {
   };
 
   useEffect(() => {
+    // 1. Live Real-Time Multi-Device Cloud Synchronization via Firestore
+    // When the Admin adds or updates on any device, it instantly appears on all students' devices worldwide!
+    const unsubPlatforms = subscribeToPlatforms((cloudPlatforms) => {
+      if (Array.isArray(cloudPlatforms)) {
+        setPlatforms(cloudPlatforms);
+      }
+    });
+
+    const unsubBanners = subscribeToBanners((cloudBanners) => {
+      if (Array.isArray(cloudBanners)) {
+        setBanners(cloudBanners);
+      }
+    });
+
+    // 2. Local backend fallback sync
     refreshBackendData();
-    // Auto sync every 5 seconds
-    const syncInterval = setInterval(refreshBackendData, 5000);
-    return () => clearInterval(syncInterval);
+    const syncInterval = setInterval(refreshBackendData, 10000);
+
+    return () => {
+      unsubPlatforms();
+      unsubBanners();
+      clearInterval(syncInterval);
+    };
   }, []);
 
   // Save profile changes to localStorage
@@ -237,8 +265,14 @@ export default function App() {
     }
   };
 
-  // Direct instant save/update platform to local state & cache (GUARANTEED PERSISTENCE!)
+  // Direct instant save/update platform to local state & Cloud Database
   const handleSavePlatformDirect = (platformData: Platform) => {
+    // 1. Save to Cloud Firestore (syncs to ALL users and devices worldwide in real-time)
+    savePlatformToCloud(platformData).catch((err) => {
+      console.warn('Cloud platform save note:', err);
+    });
+
+    // 2. Immediately update local React state and localStorage (zero latency)
     setPlatforms((prev) => {
       const index = prev.findIndex((p) => p.id === platformData.id);
       let updated: Platform[];
@@ -252,7 +286,7 @@ export default function App() {
       return updated;
     });
 
-    // Remove from deleted list if re-added or edited
+    // Remove from deleted list if re-added
     try {
       const deletedRaw = localStorage.getItem('gb_study_deleted_platforms');
       if (deletedRaw) {
@@ -261,17 +295,30 @@ export default function App() {
         localStorage.setItem('gb_study_deleted_platforms', JSON.stringify(filtered));
       }
     } catch (e) {}
+
+    // 3. Sync to local backend server
+    fetch('/api/platforms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(platformData),
+    }).catch(() => {});
   };
 
-  // Direct instant delete platform from local state & cache (0ms delay!)
+  // Direct instant delete platform from Cloud & local state (0ms delay!)
   const handleDeletePlatformDirect = (id: string) => {
+    // 1. Delete from Cloud Firestore for all users
+    deletePlatformFromCloud(id).catch((err) => {
+      console.warn('Cloud platform delete note:', err);
+    });
+
+    // 2. Delete from local state and cache
     setPlatforms((prev) => {
       const updated = prev.filter((p) => p.id !== id);
       localStorage.setItem('gb_study_platforms', JSON.stringify(updated));
       return updated;
     });
 
-    // Mark as deleted so auto-sync never brings it back
+    // 3. Mark as deleted so auto-sync never brings it back
     try {
       const deletedRaw = localStorage.getItem('gb_study_deleted_platforms');
       const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
@@ -280,10 +327,19 @@ export default function App() {
         localStorage.setItem('gb_study_deleted_platforms', JSON.stringify(deletedIds));
       }
     } catch (e) {}
+
+    // 4. Delete on local backend
+    fetch(`/api/platforms/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
-  // Direct instant save/update banner to local state & cache
+  // Direct instant save/update banner to local state & Cloud Database
   const handleSaveBannerDirect = (bannerData: BannerSlide) => {
+    // 1. Save to Cloud Firestore
+    saveBannerToCloud(bannerData).catch((err) => {
+      console.warn('Cloud banner save note:', err);
+    });
+
+    // 2. Update local state
     setBanners((prev) => {
       const index = prev.findIndex((b) => b.id === bannerData.id);
       let updated: BannerSlide[];
@@ -305,10 +361,20 @@ export default function App() {
         localStorage.setItem('gb_study_deleted_banners', JSON.stringify(filtered));
       }
     } catch (e) {}
+
+    fetch('/api/banners', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bannerData),
+    }).catch(() => {});
   };
 
-  // Direct instant delete banner from local state & cache (0ms delay!)
+  // Direct instant delete banner from Cloud & local state (0ms delay!)
   const handleDeleteBannerDirect = (id: string) => {
+    deleteBannerFromCloud(id).catch((err) => {
+      console.warn('Cloud banner delete note:', err);
+    });
+
     setBanners((prev) => {
       const updated = prev.filter((b) => b.id !== id);
       localStorage.setItem('gb_study_banners', JSON.stringify(updated));
@@ -323,6 +389,8 @@ export default function App() {
         localStorage.setItem('gb_study_deleted_banners', JSON.stringify(deletedIds));
       }
     } catch (e) {}
+
+    fetch(`/api/banners/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // When initial splash completes

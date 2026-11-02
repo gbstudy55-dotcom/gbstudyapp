@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Platform": {
+      "title": "Platform",
+      "description": "Educational study platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "logo": { "type": "string" },
+        "url": { "type": "string" },
+        "bgColor": { "type": "string" },
+        "category": { "type": "string" },
+        "batchesCount": { "type": "number" },
+        "openMode": { "type": "string" },
+        "tabPlacement": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Carousel promotional banner slide",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "actionUrl": { "type": "string" },
+        "actionType": { "type": "string" },
+        "badgeText": { "type": "string" },
+        "authorText": { "type": "string" },
+        "handleText": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    }
+  },
+  "firestore": {
+    "/platforms/{platformId}": {
+      "schema": "Platform",
+      "description": "Educational platforms available for students"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Featured banners for carousel slider"
+    }
+  }
+}
